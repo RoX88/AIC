@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" role="img" aria-labelledby="title desc">
+  <title id="title">AI Competence</title>
+  <desc id="desc">AI Competence logo</desc>
+  <g transform="translate(31 32) rotate(45)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
+    <rect x="-20" y="-20" width="24" height="24" rx="3" stroke="#ffffff"/>
+    <rect x="-4" y="-20" width="24" height="24" rx="3" stroke="#4b9cff"/>
+    <rect x="-20" y="-4" width="24" height="24" rx="3" stroke="#4b9cff"/>
+    <rect x="-4" y="-4" width="24" height="24" rx="3" stroke="#ffffff"/>
+  </g>
+  <text x="72" y="39" fill="#ffffff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="-0.7">AI Competence</text>
+</svg>

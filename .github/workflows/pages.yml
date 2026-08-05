@@ -38,7 +38,7 @@ jobs:
           html = path.read_text(encoding='utf-8')
 
           replacements = {
-              'ai-competence-logo.png?v=20260805-2101': 'ai-competence-logo-clean-v2.svg?v=20260805-2132',
+              'ai-competence-logo.png?v=20260805-2101': 'ai-competence-logo-clean-v2.svg?v=20260805-2138',
               '.header{height:74px;': '.header{height:66px;',
               '.brand{display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none}': '.brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;line-height:0;overflow:visible}',
               '.brand-logo{display:block;width:228px;height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto}': '.brand-logo{display:block;width:150px;height:auto;max-height:none;object-fit:contain;object-position:left center;flex:0 0 auto;overflow:visible}',
@@ -52,10 +52,10 @@ jobs:
           for old, new in replacements.items():
               if old not in html:
                   raise SystemExit(f'Expected header fragment not found: {old}')
-              html = html.replace(old, new, 1)
+              html = html.replace(old, new)
 
           path.write_text(html, encoding='utf-8')
-          print('Applied 150px logo with expanded SVG viewBox')
+          print('Replaced all legacy logo references with the unclipped SVG')
           PY
 
       - name: Validate snapshot and branding
@@ -73,12 +73,13 @@ jobs:
           assert len({item['url'] for item in articles}) == count
 
           html = Path('index.html').read_text(encoding='utf-8')
-          assert 'ai-competence-logo-clean-v2.svg?v=20260805-2132' in html
+          assert html.count('ai-competence-logo-clean-v2.svg?v=20260805-2138') == 2
+          assert 'ai-competence-logo.png?v=20260805-2101' not in html
           assert 'width:150px;height:auto;max-height:none' in html
           assert 'width="900" height="210"' in html
           assert './assets/brand.js' not in html
           assert Path('assets/ai-competence-logo-clean-v2.svg').is_file()
-          print(f'Validated {count} unique articles and unclipped SVG branding')
+          print(f'Validated {count} unique articles and two unclipped SVG references')
           PY
 
       - name: Configure Pages

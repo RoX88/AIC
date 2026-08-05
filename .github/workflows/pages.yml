@@ -29,7 +29,7 @@ jobs:
       - name: Build complete WordPress snapshot
         run: python3 scripts/build_snapshot.py
 
-      - name: Apply compact unclipped logo header
+      - name: Apply clean compact logo header
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -38,14 +38,15 @@ jobs:
           html = path.read_text(encoding='utf-8')
 
           replacements = {
-              'ai-competence-logo.png?v=20260805-2101': 'ai-competence-logo.png?v=20260805-2111',
-              '.header{height:74px;': '.header{height:64px;',
+              'ai-competence-logo.png?v=20260805-2101': 'ai-competence-logo-clean.svg?v=20260805-2125',
+              '.header{height:74px;': '.header{height:68px;',
               '.brand{display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none}': '.brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;line-height:0;overflow:visible}',
-              '.brand-logo{display:block;width:228px;height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto}': '.brand-logo{display:block;height:24px;width:auto;max-width:160px;object-fit:contain;object-position:left center;flex:0 0 auto;overflow:visible}',
+              '.brand-logo{display:block;width:228px;height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto}': '.brand-logo{display:block;width:160px;height:auto;max-height:none;object-fit:contain;object-position:left center;flex:0 0 auto;overflow:visible}',
               '.brand-section{padding-left:12px;': '.brand-section{padding-left:10px;',
-              '@media(max-width:760px){.brand-logo{width:190px;max-height:35px}': '@media(max-width:760px){.brand-logo{height:22px;width:auto;max-width:150px}',
-              '@media(max-width:620px){.header{height:66px}.brand-logo{width:168px;max-height:31px}': '@media(max-width:620px){.header{height:60px}.brand-logo{height:21px;width:auto;max-width:145px}',
-              '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{width:150px;max-height:28px}': '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{height:20px;width:auto;max-width:138px}',
+              '@media(max-width:760px){.brand-logo{width:190px;max-height:35px}': '@media(max-width:760px){.brand-logo{width:140px;height:auto;max-height:none}',
+              '@media(max-width:620px){.header{height:66px}.brand-logo{width:168px;max-height:31px}': '@media(max-width:620px){.header{height:62px}.brand-logo{width:126px;height:auto;max-height:none}',
+              '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{width:150px;max-height:28px}': '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{width:116px;height:auto;max-height:none}',
+              'width="1189" height="215"': 'width="760" height="210"',
           }
 
           for old, new in replacements.items():
@@ -54,7 +55,7 @@ jobs:
               html = html.replace(old, new, 1)
 
           path.write_text(html, encoding='utf-8')
-          print('Applied compact 24px unclipped logo header')
+          print('Applied clean 160px logo with corrected intrinsic ratio')
           PY
 
       - name: Validate snapshot and branding
@@ -72,11 +73,12 @@ jobs:
           assert len({item['url'] for item in articles}) == count
 
           html = Path('index.html').read_text(encoding='utf-8')
-          assert 'ai-competence-logo.png?v=20260805-2111' in html
-          assert 'height:24px;width:auto;max-width:160px' in html
+          assert 'ai-competence-logo-clean.svg?v=20260805-2125' in html
+          assert 'width:160px;height:auto;max-height:none' in html
+          assert 'width="760" height="210"' in html
           assert './assets/brand.js' not in html
-          assert Path('assets/ai-competence-logo.png').is_file()
-          print(f'Validated {count} unique articles and compact header branding')
+          assert Path('assets/ai-competence-logo-clean.svg').is_file()
+          print(f'Validated {count} unique articles and clean SVG branding')
           PY
 
       - name: Configure Pages

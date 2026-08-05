@@ -55,11 +55,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Enforce HTTPS
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" \
-            -f build_type=workflow \
-            -F https_enforced=true

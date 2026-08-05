@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: read
@@ -23,14 +25,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure and enable Pages
+
+      - name: Build complete WordPress snapshot
+        run: python3 scripts/build_snapshot.py
+
+      - name: Validate snapshot
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('data/articles.snapshot.json')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          count = int(payload.get('count', 0))
+          articles = payload.get('articles', [])
+          assert count == len(articles), (count, len(articles))
+          assert count >= 100, count
+          assert len({item['url'] for item in articles}) == count
+          print(f'Validated {count} unique articles from {payload.get("source")}')
+          PY
+
+      - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

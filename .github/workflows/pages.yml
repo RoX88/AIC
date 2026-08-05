@@ -29,38 +29,11 @@ jobs:
       - name: Build complete WordPress snapshot
         run: python3 scripts/build_snapshot.py
 
-      - name: Apply original proportional logo
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('index.html')
-          html = path.read_text(encoding='utf-8')
-
-          replacements = {
-              'ai-competence-logo.png?v=20260805-2101': 'ai-competence-logo.png?v=20260805-2140',
-              '.header{height:74px;': '.header{height:66px;',
-              '.brand{display:flex;align-items:center;gap:12px;min-width:0;text-decoration:none}': '.brand{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;line-height:0;overflow:visible}',
-              '.brand-logo{display:block;width:228px;height:auto;max-height:42px;object-fit:contain;object-position:left center;flex:0 0 auto}': '.brand-logo{display:block;width:160px;height:auto;max-width:100%;max-height:none;object-fit:contain;object-position:left center;flex:0 0 auto;overflow:visible}',
-              '.brand-section{padding-left:12px;': '.brand-section{padding-left:10px;',
-              '@media(max-width:760px){.brand-logo{width:190px;max-height:35px}': '@media(max-width:760px){.brand-logo{width:145px;height:auto;max-height:none}',
-              '@media(max-width:620px){.header{height:66px}.brand-logo{width:168px;max-height:31px}': '@media(max-width:620px){.header{height:60px}.brand-logo{width:132px;height:auto;max-height:none}',
-              '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{width:150px;max-height:28px}': '@media(max-width:430px){.header{padding-left:14px;padding-right:14px}.brand-logo{width:118px;height:auto;max-height:none}',
-          }
-
-          for old, new in replacements.items():
-              if old not in html:
-                  raise SystemExit(f'Expected header fragment not found: {old}')
-              html = html.replace(old, new)
-
-          path.write_text(html, encoding='utf-8')
-          print('Applied untouched 1189x215 PNG with proportional CSS scaling')
-          PY
-
-      - name: Validate snapshot and logo proportions
+      - name: Validate snapshot and header asset
         run: |
           python3 - <<'PY'
           import json
+          import struct
           from pathlib import Path
 
           snapshot = Path('data/articles.snapshot.json')
@@ -71,15 +44,15 @@ jobs:
           assert count >= 100, count
           assert len({item['url'] for item in articles}) == count
 
+          logo = Path('assets/ai-competence-logo-header.png')
+          data = logo.read_bytes()
+          assert data[:8] == b'\x89PNG\r\n\x1a\n'
+          width, height = struct.unpack('>II', data[16:24])
+          assert (width, height) == (600, 108), (width, height)
+
           html = Path('index.html').read_text(encoding='utf-8')
-          logo_ref = 'ai-competence-logo.png?v=20260805-2140'
-          assert html.count(logo_ref) == 2
-          assert 'ai-competence-logo-clean' not in html
-          assert 'width:160px;height:auto;max-width:100%;max-height:none' in html
-          assert 'width="1189" height="215"' in html
           assert './assets/brand.js' not in html
-          assert Path('assets/ai-competence-logo.png').is_file()
-          print(f'Validated {count} articles and unchanged 1189:215 logo ratio')
+          print(f'Validated {count} articles and 600x108 Intelligence header logo')
           PY
 
       - name: Configure Pages

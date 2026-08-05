@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 210" role="img" aria-labelledby="logoTitle logoDesc" preserveAspectRatio="xMinYMid meet">
+  <title id="logoTitle">AI Competence</title>
+  <desc id="logoDesc">AI Competence logo with blue gradient mark and complete white wordmark</desc>
+  <defs>
+    <linearGradient id="barLeft" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13aaff"/>
+      <stop offset="1" stop-color="#005be7"/>
+    </linearGradient>
+    <linearGradient id="barCenter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0080ff"/>
+      <stop offset="1" stop-color="#0e2ee8"/>
+    </linearGradient>
+    <linearGradient id="barRight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10dff5"/>
+      <stop offset="1" stop-color="#0085ea"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="170%" height="190%">
+      <feDropShadow dx="2" dy="6" stdDeviation="5" flood-color="#003a99" flood-opacity=".35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <path d="M8 190L72 110l66 80z" fill="#0043f0" opacity=".96"/>
+    <path d="M72 190l63-90 66 90z" fill="#0019c8" opacity=".94"/>
+    <rect x="32" y="70" width="46" height="116" rx="23" fill="url(#barLeft)" transform="rotate(-42 55 128)"/>
+    <rect x="82" y="8" width="52" height="170" rx="26" fill="url(#barCenter)" transform="rotate(-23 108 93)"/>
+    <rect x="146" y="36" width="48" height="128" rx="24" fill="url(#barRight)" transform="rotate(-4 170 100)"/>
+  </g>
+
+  <text x="240" y="112" fill="#f7faff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="72" font-weight="500" letter-spacing="-1" textLength="610" lengthAdjust="spacingAndGlyphs">AI Competence</text>
+  <text x="545" y="165" fill="#d7e3f1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="31" font-weight="600" text-anchor="middle" letter-spacing="1">.ORG</text>
+</svg>

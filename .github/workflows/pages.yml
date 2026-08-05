@@ -44,6 +44,22 @@ jobs:
           print(f'Validated {count} unique articles from {payload.get("source")}')
           PY
 
+      - name: Inject header branding
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          marker = '<script src="./assets/app.js" defer></script>'
+          branding = '<script src="./assets/brand.js" defer></script>\n' + marker
+          if './assets/brand.js' not in html:
+              if marker not in html:
+                  raise SystemExit('App script marker not found in index.html')
+              html = html.replace(marker, branding, 1)
+              path.write_text(html, encoding='utf-8')
+          print('Header branding ready')
+          PY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

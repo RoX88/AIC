@@ -29,6 +29,23 @@ jobs:
       - name: Build complete WordPress snapshot
         run: python3 scripts/build_snapshot.py
 
+      - name: Pin visible header logo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          local_ref = './assets/ai-competence-logo-header.png?v=20260805-2148'
+          absolute_ref = 'https://raw.githubusercontent.com/RoX88/AIC/main/assets/ai-competence-logo-header.png?v=20260805-2207'
+          occurrences = html.count(local_ref)
+          if occurrences != 2:
+              raise SystemExit(f'Expected two local logo references, found {occurrences}')
+          html = html.replace(local_ref, absolute_ref)
+          path.write_text(html, encoding='utf-8')
+          print('Pinned both logo references to the absolute repository asset URL')
+          PY
+
       - name: Validate snapshot and header asset
         run: |
           python3 - <<'PY'
@@ -51,8 +68,13 @@ jobs:
           assert (width, height) == (600, 108), (width, height)
 
           html = Path('index.html').read_text(encoding='utf-8')
+          absolute_ref = 'https://raw.githubusercontent.com/RoX88/AIC/main/assets/ai-competence-logo-header.png?v=20260805-2207'
+          assert html.count(absolute_ref) == 2
+          assert './assets/ai-competence-logo-header.png' not in html
+          assert 'height:34px;width:auto' in html
+          assert 'width="600" height="108"' in html
           assert './assets/brand.js' not in html
-          print(f'Validated {count} articles and 600x108 Intelligence header logo')
+          print(f'Validated {count} articles and visible 600x108 header logo')
           PY
 
       - name: Configure Pages

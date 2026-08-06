@@ -57,34 +57,38 @@ jobs:
           progress = "    status.textContent = `Checking live WordPress page ${Math.min(start + 4, totalPages)} of ${totalPages}…`;\n"
           js = js.replace(progress, '', 1)
 
-          partial_live = """  } else {
-            status.textContent = `Six-hour server snapshot · ${articles.length.toLocaleString()} articles · live REST returned ${live.length.toLocaleString()}`;
-            status.classList.add('warn');
-          }
-          """
-          quiet_partial = """  } else {
-            status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;
-            status.classList.remove('warn');
-          }
-          """
+          partial_live = "\n".join([
+              "  } else {",
+              "    status.textContent = `Six-hour server snapshot · ${articles.length.toLocaleString()} articles · live REST returned ${live.length.toLocaleString()}`;",
+              "    status.classList.add('warn');",
+              "  }",
+          ])
+          quiet_partial = "\n".join([
+              "  } else {",
+              "    status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;",
+              "    status.classList.remove('warn');",
+              "  }",
+          ])
           if partial_live not in js:
               raise SystemExit('Partial live-refresh status block not found')
           js = js.replace(partial_live, quiet_partial, 1)
 
-          public_failure = """    if (snapshotLoaded) {
-            status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles · live refresh unavailable`;
-            status.classList.add('warn');
-            error.textContent = `The live WordPress refresh was unavailable, so the complete server snapshot remains active. ${liveError.message}`;
-            error.classList.remove('hidden');
-          } else {
-          """
-          quiet_failure = """    if (snapshotLoaded) {
-            status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;
-            status.classList.remove('warn');
-            error.textContent = '';
-            error.classList.add('hidden');
-          } else {
-          """
+          public_failure = "\n".join([
+              "    if (snapshotLoaded) {",
+              "      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles · live refresh unavailable`;",
+              "      status.classList.add('warn');",
+              "      error.textContent = `The live WordPress refresh was unavailable, so the complete server snapshot remains active. ${liveError.message}`;",
+              "      error.classList.remove('hidden');",
+              "    } else {",
+          ])
+          quiet_failure = "\n".join([
+              "    if (snapshotLoaded) {",
+              "      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;",
+              "      status.classList.remove('warn');",
+              "      error.textContent = '';",
+              "      error.classList.add('hidden');",
+              "    } else {",
+          ])
           if public_failure not in js:
               raise SystemExit('Public live-refresh failure block not found')
           js = js.replace(public_failure, quiet_failure, 1)

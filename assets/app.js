@@ -1,13 +1,14 @@
 const WP = 'https://aicompetence.org';
 const SNAPSHOT = './data/articles.snapshot.json';
 const PAGE_SIZE = 60;
-const MINIMUM_ARTICLES = 100;
+const MINIMUM_ARTICLES = 2000;
 
 let articles = [];
 let filtered = [];
 let shown = PAGE_SIZE;
 let category = 'All';
 let activeSource = 'loading';
+let snapshotGeneratedAt = '';
 
 const $ = (selector) => document.querySelector(selector);
 const grid = $('#grid');
@@ -124,7 +125,8 @@ async function loadSnapshot() {
   if (!response.ok) throw new Error(`Snapshot returned ${response.status}`);
   const payload = await response.json();
   if (!Array.isArray(payload.articles)) throw new Error('Snapshot has no articles array');
-  setArticles(payload.articles, 'Six-hour server snapshot', payload.generated_at || '');
+  snapshotGeneratedAt = payload.generated_at || '';
+  setArticles(payload.articles, 'Six-hour server snapshot', snapshotGeneratedAt);
   return payload;
 }
 
@@ -133,31 +135,16 @@ async function loadLiveWordPress() {
   const firstUrl = `${WP}/wp-json/wp/v2/posts?per_page=100&page=1&status=publish&_fields=${encodeURIComponent(fields)}`;
   const first = await fetch(firstUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
   if (!first.ok) throw new Error(`WordPress returned ${first.status}`);
-  const totalPages = Number(first.headers.get('X-WP-TotalPages') || 1);
-  let posts = await first.json();
+  const posts = await first.json();
+  if (!Array.isArray(posts)) throw new Error('WordPress returned an invalid response');
 
-  for (let start = 2; start <= totalPages; start += 5) {
-    const requests = [];
-    for (let page = start; page < Math.min(start + 5, totalPages + 1); page += 1) {
-      const url = `${WP}/wp-json/wp/v2/posts?per_page=100&page=${page}&status=publish&_fields=${encodeURIComponent(fields)}`;
-      requests.push(fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' }).then((response) => {
-        if (!response.ok) throw new Error(`WordPress page ${page} returned ${response.status}`);
-        return response.json();
-      }));
-    }
-    posts = posts.concat(...await Promise.all(requests));
-    status.textContent = `Checking live WordPress page ${Math.min(start + 4, totalPages)} of ${totalPages}…`;
-  }
-
-  const live = deduplicate(posts.map(normalizeRestPost));
-  if (live.length < MINIMUM_ARTICLES) throw new Error(`Live WordPress returned only ${live.length} posts`);
-
-  if (live.length >= articles.length) {
-    setArticles(live, 'Live WordPress index');
-  } else {
-    status.textContent = `Six-hour server snapshot · ${articles.length.toLocaleString()} articles · live REST returned ${live.length.toLocaleString()}`;
-    status.classList.add('warn');
-  }
+  const recent = posts.map(normalizeRestPost);
+  const merged = deduplicate([...recent, ...articles]);
+  setArticles(
+    merged,
+    'Six-hour snapshot + latest WordPress posts',
+    snapshotGeneratedAt,
+  );
 }
 
 async function initialize() {
@@ -176,15 +163,15 @@ async function initialize() {
   } catch (liveError) {
     console.error(liveError);
     if (snapshotLoaded) {
-      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles · live refresh unavailable`;
-      status.classList.add('warn');
-      error.textContent = `The live WordPress refresh was unavailable, so the complete server snapshot remains active. ${liveError.message}`;
-      error.classList.remove('hidden');
+      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;
+      status.classList.remove('warn');
+      error.textContent = '';
+      error.classList.add('hidden');
     } else {
       status.textContent = 'Article index unavailable';
       status.classList.add('warn');
       count.textContent = 'The article index could not be loaded.';
-      error.textContent = `Neither the server snapshot nor WordPress could be loaded. ${liveError.message}`;
+      error.textContent = 'The article index is temporarily unavailable. Please try again shortly.';
       error.classList.remove('hidden');
     }
   }

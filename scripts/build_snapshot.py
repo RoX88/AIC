@@ -14,6 +14,8 @@ import json
 import os
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -23,8 +25,29 @@ from typing import Any
 
 BASE = os.environ.get("WP_BASE", "https://aicompetence.org").rstrip("/")
 OUT = Path("data/articles.snapshot.json")
-MINIMUM_ARTICLES = int(os.environ.get("MINIMUM_ARTICLES", "100"))
+MINIMUM_ARTICLES = int(os.environ.get("MINIMUM_ARTICLES", "2000"))
+MIN_REQUEST_INTERVAL_SECONDS = float(os.environ.get("WP_REQUEST_INTERVAL", "15"))
+MAX_REQUEST_ATTEMPTS = int(os.environ.get("WP_REQUEST_ATTEMPTS", "5"))
+RETRYABLE_HTTP_STATUS = {403, 429, 500, 502, 503, 504}
 USER_AGENT = "AI-Topic-Explorer-Snapshot/2.0 (+https://explore.aicompetence.org/)"
+_last_request_started = 0.0
+
+
+def wait_for_request_slot() -> None:
+    """Keep WordPress requests below the site's rate-limit threshold."""
+    global _last_request_started
+    elapsed = time.monotonic() - _last_request_started
+    remaining = MIN_REQUEST_INTERVAL_SECONDS - elapsed
+    if _last_request_started and remaining > 0:
+        time.sleep(remaining)
+    _last_request_started = time.monotonic()
+
+
+def retry_delay(error: urllib.error.HTTPError, attempt: int) -> float:
+    retry_after = error.headers.get("Retry-After", "") if error.headers else ""
+    if retry_after.isdigit():
+        return max(float(retry_after), MIN_REQUEST_INTERVAL_SECONDS)
+    return max(MIN_REQUEST_INTERVAL_SECONDS, min(20 * (2**attempt), 120))
 
 
 def request(url: str, timeout: int = 45) -> tuple[bytes, Any]:
@@ -32,8 +55,32 @@ def request(url: str, timeout: int = 45) -> tuple[bytes, Any]:
         url,
         headers={"User-Agent": USER_AGENT, "Accept": "application/json, application/xml, text/xml, */*"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return response.read(), response.headers
+    for attempt in range(MAX_REQUEST_ATTEMPTS):
+        wait_for_request_slot()
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                return response.read(), response.headers
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_STATUS or attempt + 1 >= MAX_REQUEST_ATTEMPTS:
+                raise
+            delay = retry_delay(exc, attempt)
+            print(
+                f"WordPress returned {exc.code}; retrying in {delay:.0f}s "
+                f"({attempt + 2}/{MAX_REQUEST_ATTEMPTS})",
+                flush=True,
+            )
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt + 1 >= MAX_REQUEST_ATTEMPTS:
+                raise
+            delay = max(MIN_REQUEST_INTERVAL_SECONDS, min(20 * (2**attempt), 120))
+            print(
+                f"WordPress request failed ({exc}); retrying in {delay:.0f}s "
+                f"({attempt + 2}/{MAX_REQUEST_ATTEMPTS})",
+                flush=True,
+            )
+            time.sleep(delay)
+    raise RuntimeError(f"WordPress request failed after {MAX_REQUEST_ATTEMPTS} attempts: {url}")
 
 
 def clean_title(value: str) -> str:
@@ -137,6 +184,8 @@ def discover_post_sitemaps() -> list[str]:
                 low = loc.lower()
                 if "post-sitemap" in low or "wp-sitemap-posts-post" in low:
                     found.append(loc)
+            if found:
+                break
         except Exception as exc:  # keep trying alternate sources
             errors.append(f"{endpoint}: {exc}")
     if not found:
@@ -181,13 +230,13 @@ def main() -> int:
     sitemap: list[dict[str, str]] = []
     warnings: list[str] = []
     try:
-        rest = fetch_rest()
-    except Exception as exc:
-        warnings.append(f"REST unavailable: {exc}")
-    try:
         sitemap = fetch_sitemaps()
     except Exception as exc:
         warnings.append(f"Sitemap unavailable: {exc}")
+    try:
+        rest = fetch_rest()
+    except Exception as exc:
+        warnings.append(f"REST unavailable: {exc}")
 
     merged = {item["url"]: item for item in sitemap}
     merged.update({item["url"]: item for item in rest})

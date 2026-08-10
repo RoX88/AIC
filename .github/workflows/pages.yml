@@ -46,67 +46,6 @@ jobs:
           print('Pinned both logo references to the absolute repository asset URL')
           PY
 
-      - name: Remove public refresh diagnostics
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('assets/app.js')
-          js = path.read_text(encoding='utf-8')
-
-          progress = "    status.textContent = `Checking live WordPress page ${Math.min(start + 4, totalPages)} of ${totalPages}…`;\n"
-          js = js.replace(progress, '', 1)
-
-          partial_live = "\n".join([
-              "  } else {",
-              "    status.textContent = `Six-hour server snapshot · ${articles.length.toLocaleString()} articles · live REST returned ${live.length.toLocaleString()}`;",
-              "    status.classList.add('warn');",
-              "  }",
-          ])
-          quiet_partial = "\n".join([
-              "  } else {",
-              "    status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;",
-              "    status.classList.remove('warn');",
-              "  }",
-          ])
-          if partial_live not in js:
-              raise SystemExit('Partial live-refresh status block not found')
-          js = js.replace(partial_live, quiet_partial, 1)
-
-          public_failure = "\n".join([
-              "    if (snapshotLoaded) {",
-              "      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles · live refresh unavailable`;",
-              "      status.classList.add('warn');",
-              "      error.textContent = `The live WordPress refresh was unavailable, so the complete server snapshot remains active. ${liveError.message}`;",
-              "      error.classList.remove('hidden');",
-              "    } else {",
-          ])
-          quiet_failure = "\n".join([
-              "    if (snapshotLoaded) {",
-              "      status.textContent = `${activeSource} · ${articles.length.toLocaleString()} articles`;",
-              "      status.classList.remove('warn');",
-              "      error.textContent = '';",
-              "      error.classList.add('hidden');",
-              "    } else {",
-          ])
-          if public_failure not in js:
-              raise SystemExit('Public live-refresh failure block not found')
-          js = js.replace(public_failure, quiet_failure, 1)
-
-          detailed_outage = "      error.textContent = `Neither the server snapshot nor WordPress could be loaded. ${liveError.message}`;"
-          neutral_outage = "      error.textContent = 'The article index is temporarily unavailable. Please try again shortly.';"
-          if detailed_outage not in js:
-              raise SystemExit('Detailed outage message not found')
-          js = js.replace(detailed_outage, neutral_outage, 1)
-
-          forbidden = 'The live WordPress refresh was unavailable, so the complete server snapshot remains active.'
-          if forbidden in js:
-              raise SystemExit('Public WordPress diagnostic still present')
-
-          path.write_text(js, encoding='utf-8')
-          print('Public WordPress refresh diagnostics removed')
-          PY
-
       - name: Validate snapshot and header asset
         run: |
           python3 - <<'PY'
@@ -119,7 +58,7 @@ jobs:
           count = int(payload.get('count', 0))
           articles = payload.get('articles', [])
           assert count == len(articles), (count, len(articles))
-          assert count >= 100, count
+          assert count >= 2000, count
           assert len({item['url'] for item in articles}) == count
 
           logo = Path('assets/ai-competence-logo-header.png')
@@ -139,6 +78,8 @@ jobs:
           app = Path('assets/app.js').read_text(encoding='utf-8')
           assert 'The live WordPress refresh was unavailable, so the complete server snapshot remains active.' not in app
           assert 'live refresh unavailable' not in app
+          assert 'for (let start = 2;' not in app
+          assert 'Six-hour snapshot + latest WordPress posts' in app
           print(f'Validated {count} articles, header asset, and silent refresh fallback')
           PY
 
